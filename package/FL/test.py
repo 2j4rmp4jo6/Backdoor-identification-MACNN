@@ -73,7 +73,8 @@ def test_img_poison(net, datatest):
             pred = predlist[-1].argmax(dim=1)
 
             # 這裡的是原本的 (沒跑到這裡過，所以我很不確定這邊回傳的值這樣處理會不會出問題)，以下的其他兩種基本上也是這樣處理
-            y_gold = target.data.view_as(pred).squeeze(1)
+            # y_gold = target.data.view_as(pred).squeeze(1)
+            y_gold = target.data.view_as(pred)
 
             # 原本計算每個 label 的次數的方法
             for pred_idx in range(len(pred)):
@@ -101,7 +102,8 @@ def test_img_poison(net, datatest):
 
             pred = predlist[-1].argmax(dim=1)
 
-            y_gold_pos = target.data.view_as(pred).squeeze(1)
+            # y_gold_pos = target.data.view_as(pred).squeeze(1)
+            y_gold_pos = target.data.view_as(pred)
 
             for pred_idx in range(len(pred)):
                 gold_all_pos[y_gold_pos[pred_idx]] += 1
@@ -141,7 +143,8 @@ def test_img_poison(net, datatest):
             pred = predlist[-1].argmax(dim=1)
             val_loss += float(loss.item())
 
-            y_gold_train = target.data.view_as(pred).squeeze(1)
+            # y_gold_train = target.data.view_as(pred).squeeze(1)
+            y_gold_train = target.data.view_as(pred)
 
             for pred_idx in range(len(pred)):
                 gold_all_train[y_gold_train[pred_idx]] += 1
