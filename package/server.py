@@ -77,7 +77,7 @@ def main():
     for round in range(f.epochs):
 
         # 每輪都要重置「模型參數」、「模型 loss」
-        # my_server.reset()
+        my_server.reset()
 
         # 各client跑local epoch的時間
         # 因為實際上跑的時候是sequence而非parallel
