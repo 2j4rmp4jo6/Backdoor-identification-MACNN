@@ -102,7 +102,8 @@ class DisLoss(nn.Module):
         x = x.view(b, -1)
         num = torch.argmax(x, dim=1)
         cx = num % h
-        cy = num // h
+        # cy = num // h
+        cy = torch.div(num, h, rounding_mode='floor')
         maps = self.get_maps(h, cx, cy)
         maps = torch.from_numpy(maps).to(x.device)
         # maps=F.normalize(maps,dim=-1,p=2)
@@ -264,7 +265,8 @@ class LocalUpdate_poison(object):
                     # 取出 feature chennel 中值最大的 index
                     argpos = m.argmax()
                     argposx = argpos % H
-                    argposy = argpos // H
+                    # argposy = argpos // H
+                    argposy = torch.div(argpos, H, rounding_mode='floor')
                     indicators[c, batch_idx * B * 2 + b] = argposx
                     indicators[c, batch_idx * B * 2 + 1 + b] = argposy
         # 回傳的是各 chennel 每張圖最大的值的 x, y 位置
