@@ -229,7 +229,9 @@ class LocalUpdate_poison(object):
                     images, labels = images.to(f.device), labels.to(f.device)
 
                     # 沿用 macnn 那邊的更新方式
-                    feat_maps, cnn_pred, Plist, Mlist, ylist, predlist = net(images)
+                    # feat_maps, cnn_pred, Plist, Mlist, ylist, predlist = net(images)
+                    # 簡化
+                    feat_maps, cnn_pred = net.forward_simplify(images)
                     loss = criterion(cnn_pred, labels)
 
                     pred = cnn_pred.argmax(dim=1)
@@ -239,7 +241,7 @@ class LocalUpdate_poison(object):
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
-            print("train, train_loss:{}".format(train_loss / len(self.ldr_train)))
+            print("train, train_loss: {}".format(train_loss / len(self.ldr_train)))
             lr_scheduler.step()
         return net
     
@@ -249,7 +251,9 @@ class LocalUpdate_poison(object):
         for batch_idx, (images, labels) in enumerate(self.ldr_train):
             images, labels = images.to(f.device), labels.to(f.device)
             # 沿用 macnn 那邊取 feature map 的方法
-            feat_maps, _, _, _, _, _ = net(images)
+            # feat_maps, _, _, _, _, _ = net(images)
+            # 簡化
+            feat_maps, _ = net.forward_simplify(images)
             # 這邊也還沒確認過 data 是否正常，這邊各種很迷樣的參數可以參考原 paper 應該是一樣的
             # feat_maps: [10, 128, 14, 14]
             # B: local batch number, C: feature channel number, H: height, W: width
@@ -414,7 +418,7 @@ class LocalUpdate_poison(object):
                     loss.backward()
                     # print(model.se1.fc[0].weight.grad.max())
                     optimizer.step()
-            print("train, train_loss:{}".format(train_loss / len(self.ldr_train)))
+            print("train, train_loss: {}".format(train_loss / len(self.ldr_train)))
             epoch_loss.append(train_loss / len(self.ldr_train))
             lr_scheduler.step()
         return net, epoch_loss

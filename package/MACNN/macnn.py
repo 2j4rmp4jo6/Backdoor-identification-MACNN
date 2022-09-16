@@ -194,6 +194,13 @@ class MACNN(nn.Module):
                [M1,M2,M3,M4],\
                [y1,y2,y3,y4],\
                [pred1,pred2,pred3,pred4,pred]
+    
+    def forward_simplify(self,x):
+        feat_maps = self.vgg(x)
+
+        cnn_pred=self.cnnfc(self.pool(feat_maps).flatten(1))
+
+        return feat_maps, cnn_pred
 
 def seed_torch(seed=42):
     # random.seed(seed)
