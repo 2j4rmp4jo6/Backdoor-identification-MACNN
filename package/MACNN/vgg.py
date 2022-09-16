@@ -40,6 +40,12 @@ class VGG(nn.Module):
             self._initialize_weights()
 
     def forward(self, x):
+        # check:
+        # 他的 VGG 被刪減過，少了 avgpool 會讓後面 MACNN SELayer feature 的維度較大
+        # 加速可以考慮加回來
+        # check:
+        # 論文中有提到 Part-CNN 產生 output 的 layer (ie conv5_4 in VGG-19)採用的是 GAP (Global average Pooling)
+        # 應該是要把 VGG 的 pooling 改掉(但現在甚至沒有pooling(?
         x = self.features(x)
         # x = self.avgpool(x)
         # x = torch.flatten(x, 1)

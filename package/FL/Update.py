@@ -111,6 +111,9 @@ class DisLoss(nn.Module):
         return loss
 
     def get_maps(self, a, cx, cy):
+        # check:
+        # 那個 不太確定 cpu 會不會拖慢
+        # 不確定 eq.8 的 x,y 
         batch_size = len(cx)
         cx = cx.data.cpu().numpy()
         cy = cy.data.cpu().numpy()
@@ -157,11 +160,18 @@ class DivLoss(nn.Module):
         t2, _ = torch.max(tmp2, dim=0)
         t3, _ = torch.max(tmp3, dim=0)
         t4, _ = torch.max(tmp4, dim=0)
+
+        # check:
+        # 這裡把論文中 eq.9 的 mrg拿掉了，不確定有什麼影響
+        # 文章中的 mrg=0.02 是用來減少 noise 的影響(增加 rubustness)
+
         # t1 = t1 - 0.01*mgr
         # t2 = t2 - 0.01*mgr
         # t3 = t3 - 0.01*mgr
         # t4 = t4 - 0.01*mgr
 
+        # check:
+        # eq.9: loss 多了平均(?) 
         loss = (torch.sum(x1 * t1) + \
                 torch.sum(x2 * t2) + \
                 torch.sum(x3 * t3) + \
@@ -193,7 +203,8 @@ class LocalUpdate_poison(object):
 
             train_loss = 0.0
             num_corrects_train = 0
-
+            
+            # Sets the module in training mode.
             net.train()
         
             for batch_idx, (images, labels) in enumerate(self.ldr_train):
@@ -240,20 +251,26 @@ class LocalUpdate_poison(object):
             # 沿用 macnn 那邊取 feature map 的方法
             feat_maps, _, _, _, _, _ = net(images)
             # 這邊也還沒確認過 data 是否正常，這邊各種很迷樣的參數可以參考原 paper 應該是一樣的
+            # feat_maps: [10, 128, 14, 14]
+            # B: local batch number, C: feature channel number, H: height, W: width
             B, C, H, W = feat_maps.shape
             for b in range(B):
                 for c in range(C):
                     m = feat_maps[b, c, :, :]
+                    # 取出 feature chennel 中值最大的 index
                     argpos = m.argmax()
                     argposx = argpos % H
                     argposy = argpos // H
                     indicators[c, batch_idx * B * 2 + b] = argposx
                     indicators[c, batch_idx * B * 2 + 1 + b] = argposy
+        # 回傳的是各 chennel 每張圖最大的值的 x, y 位置
         return indicators
     
     def clustering(self, indicators):
         # 這邊有兩種 clustering 方式，原本會有問題，在改過 feature 數量之後好像就沒事了 (原本應該是 faeture 數量太多會有很多重複的點之類的)
         # 兩種都可以用，不過 k-means 好像會快一點，之前太多重複的點的時候 k-means 也會報錯
+        # 每個 row 是一個 feature channel 在每張圖上的 x y值
+        # 這個部份我在想是不是可以不用到全部的圖片都做
         cluster_pred  = ElasticNetSubspaceClustering(n_clusters=4, algorithm='lasso_lars', gamma=50).fit_predict(indicators)
         # cluster_pred = KMeans(n_clusters=4, random_state=0).fit_predict(indicators)
         indicators1 = list()
@@ -269,6 +286,7 @@ class LocalUpdate_poison(object):
                 indicators3.append(i)
             elif cluster_pred[i] == 3:
                 indicators4.append(i)
+        # feature channel 分成 4 個cluster, 這裡的 indicators 裡存的是 feature channel 的 index 
         return [indicators1,indicators2,indicators3,indicators4]
     
     @torch.enable_grad()
@@ -289,6 +307,8 @@ class LocalUpdate_poison(object):
         inds2 = np.zeros(128)
         inds3 = np.zeros(128)
         inds4 = np.zeros(128)
+        # 將 128 個 feature channel 的分到各 cluster 的 index 設為 1，
+        # i.e. 第 6 個、第 10 個 feature 被分到第 1 個 cluster，則 inds1[5] = 1, inds1[9] = 1
         inds1[indicators_list[0]] = 1
         inds2[indicators_list[1]] = 1
         inds3[indicators_list[2]] = 1
@@ -299,7 +319,10 @@ class LocalUpdate_poison(object):
         inds4 = torch.from_numpy(inds4).view(1, 128).float()
 
         criterion=nn.MSELoss()
+
+        # Sets the module in training mode.
         net.train()
+
         for epoch in range(1):
             for idx, datalabel in enumerate(self.ldr_train):
                 data=datalabel[0].to(f.device)
@@ -370,11 +393,17 @@ class LocalUpdate_poison(object):
                     _, _, _, Mlist, _, predlist = net(images)
 
                     # 以下算 loss 的部分是直接沿用 macnn 那邊的計算方式，還沒驗證過移過來之後會不會有什麼問題
+                    # check:
+                    # 論文中好像沒有提到 clsLoss 的算法，這裡是直接使用 CrossEntropyLoss
                     clsloss = (criterion["cls"](predlist[0], labels)+criterion["cls"](predlist[1], labels)\
                               +criterion["cls"](predlist[2], labels)+criterion["cls"](predlist[3], labels)\
                               +criterion["cls"](predlist[4], labels))/5
                     divloss = criterion["div"](Mlist)
                     disloss = criterion["dis"](Mlist[0])+criterion["dis"](Mlist[1])+criterion["dis"](Mlist[2])+criterion["dis"](Mlist[3])
+                    
+                    # check:
+                    # Loss = cls + dis + lambda * div
+                    # 論文裡的 lambda = 2 這裡不知道為什麼是 20
                     loss = 20*divloss+disloss+clsloss
 
                     pred = predlist[-1].argmax(dim=1)

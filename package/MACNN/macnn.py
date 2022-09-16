@@ -106,6 +106,7 @@ class DivLoss(nn.Module):
         return loss
 
 class SELayer(nn.Module):
+    # 主要是學習特徵圖中不同 plane 對於結果的影響權重，先得到特徵圖每個 plane 對應的權重係數向量，再利用該向量與原特徵圖向量矩陣進行點積，獲得一個新的特徵圖，即 Squeeze-and-Excitation (SE) 。
     def __init__(self, channel, reduction=1):
         super(SELayer, self).__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
@@ -184,6 +185,10 @@ class MACNN(nn.Module):
         P=torch.cat([P1,P2,P3,P4,self.pool(feat_maps)],dim=1)
         pred=self.fcall(P.flatten(1))
 
+        # check:
+        # 暴力輸出的結果這個 feat_maps 是這個 function 第一行的結果，
+        # 加速的話可以在 train_cnn, getpos 時省略中間 SE 及 FC 步驟
+        # 
         return feat_maps,cnn_pred,\
                [P1,P2,P3,P4],\
                [M1,M2,M3,M4],\
