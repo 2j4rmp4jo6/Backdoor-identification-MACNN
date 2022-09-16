@@ -11,6 +11,7 @@ import cv2
 import package.MACNN.vgg as vgg
 from torch import optim as opt
 from .cluster.selfrepresentation import ElasticNetSubspaceClustering
+from ..config import for_FL as f
 
 parser = argparse.ArgumentParser()
 
@@ -41,7 +42,7 @@ class DisLoss(nn.Module):
         cx = num % h
         cy = num // h
         maps = self.get_maps(h, cx, cy)
-        maps = torch.from_numpy(maps).to(x.device)
+        maps = torch.from_numpy(maps).to(f.device)
         # maps=F.normalize(maps,dim=-1,p=2)
         part = x * maps
         loss = torch.sum(part) / b

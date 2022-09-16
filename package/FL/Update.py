@@ -105,7 +105,7 @@ class DisLoss(nn.Module):
         # cy = num // h
         cy = torch.div(num, h, rounding_mode='floor')
         maps = self.get_maps(h, cx, cy)
-        maps = torch.from_numpy(maps).to(x.device)
+        maps = torch.from_numpy(maps).to(f.device)
         # maps=F.normalize(maps,dim=-1,p=2)
         part = x * maps
         loss = torch.sum(part) / b
