@@ -427,6 +427,8 @@ class LocalUpdate_poison(object):
 
 
     def train(self, net):
+        total_time = 0
+
         # step1 update model with Lcls
         print("start training cnn")
         # 這邊加了很多測時間的東西，之後可以拿掉
@@ -434,6 +436,7 @@ class LocalUpdate_poison(object):
         net = self.train_cnn(net)
         end_time = time.time()
         print("train cnn time: ", end_time - start_time)
+        total_time += end_time - start_time
         # 原本在每個步驟結束後都會存一次 model，為了節省時間我只留有必要的這個 (應該是下面的 .keys 會用到)
         torch.save(net.state_dict(), "package/MACNN/output/cnn1.pkl")
         
@@ -451,10 +454,12 @@ class LocalUpdate_poison(object):
         indicators = self.getpos(net)
         end_time = time.time()
         print("getpos time: ", end_time - start_time)
+        total_time += end_time - start_time
         start_time = time.time()
         indicators_list = self.clustering(indicators)
         end_time = time.time()
         print("clustering time: ", end_time - start_time)
+        total_time += end_time - start_time
 
         # step3 pretrain attention module
         print("pretrain attention module")
@@ -462,6 +467,7 @@ class LocalUpdate_poison(object):
         net = self.pretrain_attn(net, indicators_list)
         end_time = time.time()
         print("pretrain attention time: ", end_time - start_time)
+        total_time += end_time - start_time
 
         # step4 fine-tune attention module and CNN with Lcls and Lcng
         print("train Lcls and Lcng")
@@ -469,6 +475,9 @@ class LocalUpdate_poison(object):
         net, epoch_loss = self.train_attnandcnn(net)
         end_time = time.time()
         print("train Lcls and Lcng time: ", end_time - start_time)
+        total_time += end_time - start_time
+
+        print("total training time: ", total_time)
 
         # 原本的 scaling 因為目前攻擊不會用到所以先不放
         return net.state_dict(), sum(epoch_loss)/len(epoch_loss), self.attacker_flag
